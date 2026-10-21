@@ -74,15 +74,36 @@
   const WD = [['08:00','08:15','Πρωινό Magazino','Μαρία Αλυφαντή'],['08:15','10:00','Αντικριστοί','Γ. Χουδαλάκης – Δ. Καμπουράκης'],['10:00','11:00','Το Ημερολόγιο','Παύλος Τσίμας'],['11:00','12:00','Διπλός Μπέλας','Ι. Χασαπόπουλος – Α. Βούλγαρη'],['13:00','14:00','Ανατροπές','Ρ. Τζίμα – Γ. Παπαχρήστος'],['14:00','15:00','Κεντρικό Magazino','Νίκη Λυμπεράκη']];
   const WE = [['07:00','09:00','Μη με ξυπνάς από τις έξι','Κώστας Αλατζάς'],['11:00','13:00','Βαρόμετρο','Ά. Ραβανός – Μ. Δούση'],['13:00','14:00','Αστάθμητος Παράγων','Χρήστος Χωμενίδης'],['14:00','15:00','Μεσημβρινό Magazino','Ζήσης Μούσιος']];
   const OWN = { own: 1, ti: 'Alternative & Top 40', ho: 'Ξένη μουσική, μόνο hits' };
+  // Ηχογραφημένες εκπομπές του Mega (Δευτέρα–Παρασκευή): παίζουν στη σειρά από τις 18:00.
+  // Η καθεμία διαρκεί 40–60΄, άρα το μπλοκ τελειώνει σίγουρα μετά τις 20:00 και το αργότερο στις 21:00.
+  // `re`: λέξεις που ψάχνει στον τίτλο του stream (χωρίς τόνους) για να ξέρει ποια εκπομπή παίζει.
+  const REC = {
+    from: '18:00', certain: '20:00', to: '21:00',
+    shows: [
+      { ti: 'Μαινάδες', ho: 'Α. Γιάμαλη – Τζ. Μοσχολιού', at: '12:00', re: /μαιναδ|mainad/ },
+      { ti: 'Θεός Φυλάξοι', ho: 'Δ. Βερύκιος – Δ. Αλφιέρης', at: '15:00', re: /φυλαξ|fylax|filax/ },
+      { ti: 'Πού Πάμε;', ho: 'Ν. Κορωνάκης – Σ. Μπερετάνου', at: '17:00', re: /που παμε|pou pame/ }
+    ]
+  };
+  const REC_NAMES = REC.shows.map(x => x.ti).join(' · ');
+  const REC_TITLE = 'Ηχογραφημένες εκπομπές Mega';
   const DN = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
   function day(d) {
     const out = []; let t = 0;
-    for (const [a, b, ti, ho] of (d === 0 || d === 6) ? WE : WD) {
+    const wk = d >= 1 && d <= 5;
+    const list = wk ? [...WD, [REC.from, REC.to, REC_TITLE, REC_NAMES, 1]] : WE;
+    for (const [a, b, ti, ho, rec] of list) {
       if (T(a) > t) out.push({ ...OWN, a: t, b: T(a) });
-      out.push({ a: T(a), b: T(b), ti, ho }); t = T(b);
+      out.push({ a: T(a), b: T(b), ti, ho, rec: !!rec }); t = T(b);
     }
     if (t < 1440) out.push({ ...OWN, a: t, b: 1440 });
     return out;
+  }
+  // Μέσα στο μπλοκ 18:00–21:00: παίζει εκπομπή ή μουσική; Ο τίτλος του stream έχει προτεραιότητα.
+  function recState(m) {
+    const k = norm(meta), i = REC.shows.findIndex(x => x.re.test(k));
+    if (i >= 0) return { on: true, show: REC.shows[i] };
+    return { on: m < T(REC.certain), show: null };
   }
   function athens() {
     const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Athens', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
@@ -97,6 +118,10 @@
     [...tabs.children].forEach(b => b.setAttribute('aria-selected', +b.dataset.d === d));
     plist.innerHTML = day(d).map(s => {
       const now = d === n.d && n.m >= s.a && n.m < s.b;
+      if (s.rec) {
+        const items = REC.shows.map(x => `<li><span class="ico-rec"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg></span><div><b>${x.ti}</b><span>${x.ho}</span><small>Αρχικά στις ${x.at} · 40–60΄</small></div></li>`).join('');
+        return `<li class="slot rec${now ? ' now' : ''}"><time>από ${fmt(s.a)}</time><div><b>Ηχογραφημένες εκπομπές</b><span>Αναμετάδοση Mega News 104,6 · μεταβλητή διάρκεια</span><ol class="recs">${items}</ol><p class="rnote"><span class="ico-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span>Παίζουν στη σειρά και η καθεμία διαρκεί από 40 έως 60 λεπτά, οπότε το μπλοκ τελειώνει μεταξύ ${REC.certain} και ${REC.to}. Μετά συνεχίζει η μουσική. Ανάλογα με το πότε το Mega News 104,6 διαθέτει κάθε εκπομπή, μπορεί να είναι της προηγούμενης ημέρας.</span></p></div><em>Ηχογραφημένο</em></li>`;
+      }
       const body = s.own ? `<b>${s.ti.replace('&', '&amp;')}</b><span>${s.ho}</span>` : `<b>${s.ti}</b><span>${s.ho}</span>`;
       return `<li class="slot ${s.own ? 'own' : 'relay'}${now ? ' now' : ''}"><time>${fmt(s.a)} – ${fmt(s.b)}</time><div>${body}</div>${s.own ? '' : '<em>Αναμετάδοση Mega</em>'}</li>`;
     }).join('');
@@ -110,11 +135,13 @@
     const n = athens(), list = day(n.d);
     const cur = list.find(x => n.m >= x.a && n.m < x.b);
     const nxt = list.find(x => x.a >= cur.b) || day((n.d + 1) % 7)[0];
-    const what = s => s.own ? 'Alternative & Top 40' : s.ti;
-    $('now-t').textContent = what(cur);
-    $('now-s').textContent = (cur.own ? 'Ξένη μουσική' : 'Αναμετάδοση Mega 104,6 · ' + cur.ho) + ' · έως ' + fmt(cur.b % 1440);
+    const musicNow = cur.own || (cur.rec && !recState(n.m).on);
+    const what = (s, music) => (s.own || music) ? 'Alternative & Top 40' : s.ti;
+    const sub = (s, music) => (s.own || music) ? 'Ξένη μουσική' : s.rec ? 'Ηχογραφημένες · ' + REC_NAMES : 'Αναμετάδοση Mega 104,6 · ' + s.ho;
+    $('now-t').textContent = what(cur, musicNow);
+    $('now-s').textContent = sub(cur, musicNow) + (cur.rec && !musicNow ? ' · έως ' + REC.certain + '–' + REC.to : ' · έως ' + fmt(cur.b % 1440));
     $('next-t').textContent = what(nxt);
-    $('next-s').textContent = (nxt.own ? 'Ξένη μουσική' : 'Αναμετάδοση Mega 104,6 · ' + nxt.ho) + ' · από ' + fmt(nxt.a);
+    $('next-s').textContent = sub(nxt) + ' · από ' + fmt(nxt.a);
   }
 
   // ================= Σελίδες (hash router, ο ήχος δεν διακόπτεται) =================
@@ -200,10 +227,12 @@
   function render() {
     nowNext();
     const n = athens(), s = day(n.d).find(x => n.m >= x.a && n.m < x.b);
-    const relay = !s.own;
+    const rs = s.rec ? recState(n.m) : null;
+    const relay = !s.own && (!s.rec || rs.on);
     const mega = relay || /mega\s*news|104[.,]6/i.test(meta);
     let title, artist, label;
-    if (mega) { title = relay ? s.ti : 'Mega News 104,6'; artist = relay ? s.ho : ''; label = 'Αναμετάδοση · Mega News 104,6'; }
+    if (relay && s.rec) { title = rs.show ? rs.show.ti : REC_TITLE; artist = rs.show ? rs.show.ho : REC_NAMES; label = 'Ηχογραφημένη αναμετάδοση · Mega News 104,6'; }
+    else if (mega) { title = relay ? s.ti : 'Mega News 104,6'; artist = relay ? s.ho : ''; label = 'Αναμετάδοση · Mega News 104,6'; }
     else {
       const i = meta.indexOf(' - ');
       artist = i > 0 ? meta.slice(0, i).trim() : '';
