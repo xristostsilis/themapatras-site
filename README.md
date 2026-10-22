@@ -5,5 +5,5 @@
 
 - Ώρες αναμετάδοσης Mega News 104,6: `app.js` → `WD` (καθημερινές) και `WE` (Σαββατοκύριακο).
 - Λογότυπο Mega: αντικατέστησε το `images/mega-logo.png` (512×512 PNG).
-- Φόρμα επικοινωνίας: FormSubmit → themapatras@gmail.com (απαιτεί ενεργοποίηση με το πρώτο μήνυμα).
+- Φόρμα επικοινωνίας: ανοίγει το email του χρήστη (mailto) προς themapatras@gmail.com· δεν χρειάζεται υπηρεσία τρίτου.
 - Αν το domain δεν είναι το themapatras.gr, άλλαξε τα `canonical`, `og:url`, `og:image` στο `index.html`.

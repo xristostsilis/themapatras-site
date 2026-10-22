@@ -1,6 +1,19 @@
 (() => {
   'use strict';
   document.documentElement.classList.add('js');
+  // ΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ΦΟΡΕΑ: συμπλήρωσε εδώ ΜΟΝΟ αληθή στοιχεία. Ό,τι μένει κενό ('') δεν εμφανίζεται στη σελίδα «Ταυτότητα & διαφάνεια».
+  const ENTITY = {
+    name: 'Αντωνία Τσελίκα (ατομική επιχείρηση)',        // Επωνυμία φορέα όπως στο ΓΕΜΗ, π.χ. 'ΧΧΧ ΜΟΝΟΠΡΟΣΩΠΗ Ε.Π.Ε.'
+    form: 'Ατομική επιχείρηση',        // Νομική μορφή
+    afm: '069886969',         // ΑΦΜ
+    doy: 'Πατρών',         // ΔΟΥ
+    gemi: '034904916000',        // Αριθμός ΓΕΜΗ
+    address: 'Θάσου 6, 265 04 Ρίο Πατρών',     // Έδρα (οδός, αριθμός, ΤΚ, πόλη)
+    licence: 'Βεβαίωση νόμιμης λειτουργίας ΕΣΡ: ΥΠ.ΤΥΠ. 25061/Ε1/5015/17-12-2002 · Αρ. μητρώου ΕΣΡ 323',     // Άδεια λειτουργίας / στοιχεία ΕΣΡ
+    owners: 'Αντωνία Τσελίκα, μοναδική ιδιοκτήτρια (100%) της ατομικής επιχείρησης. Δεν υπάρχουν εταίροι, μέτοχοι ή έμμεσοι ιδιοκτήτες.',      // Άμεσοι και έμμεσοι ιδιοκτήτες
+    beneficial: 'Αντωνία Τσελίκα (φυσικό πρόσωπο, 100%)',  // Πραγματικοί δικαιούχοι
+    stateAds: ''     // Ποσό κρατικής διαφήμισης που εισπράχθηκε το προηγούμενο έτος, π.χ. '0 €' ή '1.250 €'
+  };
   const STREAM = 'https://radio.themapatras.gr/radio';
   const STATUS = 'https://radio.themapatras.gr/status-json.xsl';
   const MARK = 'images/mark.png';
@@ -111,12 +124,21 @@
       const now = d === n.d && n.m >= s.a && n.m < s.b && (!s.rec || recOn(s.rec, n.m));
       if (s.rec) {
         const r = s.rec;
-        return `<li class="slot rec${now ? ' now' : ''}"><time>από ${r.from}</time><div><ol class="recs"><li><span class="ico-rec"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg></span><div><b>${r.ti}</b><span>${r.ho}</span><small>Αρχικά στις ${r.at} · διάρκεια 40–60΄</small></div></li></ol><p class="rnote"><span class="ico-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span>Ηχογραφημένη αναμετάδοση από το Mega News 104,6. Τελειώνει ${r.certain}–${r.to} και μετά συνεχίζει η μουσική. Ανάλογα με το πότε το Mega τη διαθέτει, μπορεί να είναι της προηγούμενης ημέρας.</span></p></div><em>Ηχογραφημένο</em></li>`;
+        return `<li class="slot rec${now ? ' now' : ''}"><time>από ${r.from}</time><div><ol class="recs"><li><span class="ico-rec"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg></span><div><b>${r.ti}</b><span>${r.ho}</span><small><svg class="ico-back" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg>Αρχικά στις ${r.at} · 40–60΄</small></div><button type="button" class="info-btn" data-info aria-haspopup="dialog" aria-label="Πληροφορίες για τις ηχογραφημένες εκπομπές"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button></li></ol></div><em>Ηχογραφημένο</em></li>`;
       }
       const body = s.own ? `<b>${s.ti.replace('&', '&amp;')}</b><span>${s.ho}</span>` : `<b>${s.ti}</b><span>${s.ho}</span>`;
       return `<li class="slot ${s.own ? 'own' : 'relay'}${now ? ' now' : ''}"><time>${fmt(s.a)} – ${fmt(s.b)}</time><div>${body}</div>${s.own ? '' : '<em>Αναμετάδοση Mega</em>'}</li>`;
     }).join('');
   }
+  const infod = $('infod');
+  function openInfo() {
+    const ends = REC.map(r => `<li><b>${r.ti}</b>: ξεκινά ${r.from}, τελειώνει ${r.certain}–${r.to}</li>`).join('');
+    $('infod-b').innerHTML = `<p>Πρόκειται για ηχογραφημένες αναμεταδόσεις από το <strong>Mega News 104,6</strong>. Ξεκινούν σε σταθερή ώρα και έχουν μεταβλητή διάρκεια, από 40 έως 60 λεπτά. Μόλις τελειώσουν, συνεχίζει η μουσική.</p><ul class="mini-list">${ends}</ul><p>Ανάλογα με το πότε το Mega News 104,6 διαθέτει κάθε εκπομπή, μπορεί να είναι της προηγούμενης ημέρας.</p>`;
+    infod.showModal();
+  }
+  plist.addEventListener('click', e => { if (e.target.closest('[data-info]')) openInfo(); });
+  $('infod-x').onclick = () => infod.close();
+  infod.addEventListener('click', e => { if (e.target === infod) infod.close(); });
   [1,2,3,4,5,6,0].forEach(d => {
     const b = document.createElement('button');
     b.type = 'button'; b.dataset.d = d; b.setAttribute('role', 'tab'); b.textContent = DN[d];
@@ -136,7 +158,7 @@
   }
 
   // ================= Σελίδες (hash router, ο ήχος δεν διακόπτεται) =================
-  const ROUTES = { '/': 'home', '/programma': 'programma', '/diafimisi': 'diafimisi', '/epikoinonia': 'epikoinonia' };
+  const ROUTES = { '/': 'home', '/programma': 'programma', '/diafimisi': 'diafimisi', '/epikoinonia': 'epikoinonia', '/oroi-xrisis': 'oroi-xrisis', '/aporrito': 'aporrito', '/cookies': 'cookies', '/taytotita': 'taytotita' };
   const views = [...document.querySelectorAll('.view')];
   const navLinks = [...document.querySelectorAll('[data-r]')];
   const burger = $('burger'), menu = $('menu');
@@ -249,6 +271,31 @@
     } catch (e) { console.info('[status] αποτυχία ανάγνωσης τίτλου:', e.message); }
     render();
   }
+  // ================= Ταυτότητα & διαφάνεια =================
+  function fillDl(id, rows) {
+    const dl = $(id); if (!dl) return;
+    for (const [label, val, first] of rows) {
+      if (!val) continue;
+      const row = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+      dt.textContent = label; dd.textContent = val; row.append(dt, dd);
+      first ? dl.prepend(row) : dl.append(row);
+    }
+  }
+  fillDl('ident', [['Άδεια / ΕΣΡ', ENTITY.licence], ['Έδρα', ENTITY.address], ['ΓΕΜΗ', ENTITY.gemi], ['ΑΦΜ / ΔΟΥ', [ENTITY.afm, ENTITY.doy].filter(Boolean).join(' / ')], ['Νομική μορφή', ENTITY.form], ['Επωνυμία φορέα', ENTITY.name]].map(r => [...r, true]));
+  fillDl('transp', [['Ιδιοκτήτες (άμεσοι και έμμεσοι)', ENTITY.owners], ['Πραγματικοί δικαιούχοι', ENTITY.beneficial], ['Κρατική διαφήμιση (προηγούμενο έτος)', ENTITY.stateAds]]);
+  if (!$('transp').children.length) $('transp').remove();
+
+  // ================= Ενημέρωση για αποθήκευση ρυθμίσεων =================
+  const notice = $('notice');
+  let seen = false; try { seen = localStorage.getItem('notice') === '1'; } catch (e) {}
+  if (!seen) { notice.hidden = false; document.body.classList.add('has-notice'); }
+  $('notice-ok').onclick = () => { notice.hidden = true; document.body.classList.remove('has-notice'); try { localStorage.setItem('notice', '1'); } catch (e) {} };
+  $('clear-prefs').onclick = () => {
+    try { for (const k of ['theme', 'vol', 'notice']) localStorage.removeItem(k); } catch (e) {}
+    delete root.dataset.theme; themeColor(); vol.value = 0.8; audio.volume = 0.8;
+    $('clear-msg').textContent = 'Οι αποθηκευμένες ρυθμίσεις διαγράφηκαν.';
+  };
+
   route(); render(); poll(); setInterval(poll, 15000); setInterval(render, 30000);
   document.addEventListener('visibilitychange', () => !document.hidden && poll());
 
@@ -257,26 +304,28 @@
   getJSON('https://api.open-meteo.com/v1/forecast?latitude=38.2466&longitude=21.7346&current=temperature_2m,weather_code&timezone=Europe%2FAthens')
     .then(d => { const c = d.current, w = WX[c.weather_code] || ['🌡️', ''], el = $('weather'); el.textContent = `${w[0]} Πάτρα ${Math.round(c.temperature_2m)}°C ${w[1]}`; el.hidden = false; }).catch(() => {});
 
-  // ================= Φόρμα επικοινωνίας =================
-  const cf = $('cform'), cs = $('cstatus'), cm = $('cmail');
-  cf.addEventListener('submit', async e => {
+  // ================= Φόρμα επικοινωνίας (mailto, χωρίς αποστολή από τον ιστότοπο) =================
+  const cf = $('cform'), cs = $('cstatus'), cc = $('ccopy');
+  const MAIL = 'themapatras@gmail.com';
+  const compose = () => {
+    const d = Object.fromEntries(new FormData(cf));
+    const subject = `${d.topic} – από το site`;
+    const body = `Όνομα: ${d.name}\n${d.phone ? 'Τηλέφωνο: ' + d.phone + '\n' : ''}\n${d.message}`;
+    return { subject, body };
+  };
+  cf.addEventListener('submit', e => {
     e.preventDefault();
     if (!cf.reportValidity()) return;
-    const data = Object.fromEntries(new FormData(cf));
-    if (data._honey) return;
-    const b = cf.querySelector('button[type=submit]'); b.disabled = true; cm.hidden = true;
-    cs.className = 'cstatus'; cs.textContent = 'Αποστολή…';
-    try {
-      const r = await fetch('https://formsubmit.co/ajax/themapatras@gmail.com', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) });
-      const d = await r.json();
-      if (!r.ok || String(d.success) !== 'true') throw new Error(d.message || r.status);
-      cf.reset(); cs.className = 'cstatus ok'; cs.textContent = 'Ευχαριστούμε! Το μήνυμά σας στάλθηκε.';
-    } catch (err) {
-      console.warn('[form]', err);
-      cs.className = 'cstatus err'; cs.textContent = 'Δεν στάλθηκε αυτόματα. Μπορείτε να το στείλετε από το email σας:';
-      cm.href = 'mailto:themapatras@gmail.com?subject=' + encodeURIComponent('Μήνυμα από το site') + '&body=' + encodeURIComponent(`Όνομα: ${data.name}\nEmail: ${data.email}\nΤηλέφωνο: ${data.phone || '-'}\n\n${data.message}`);
-      cm.hidden = false;
-    }
-    setTimeout(() => (b.disabled = false), 5000);
+    const { subject, body } = compose();
+    location.href = `mailto:${MAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    cs.className = 'cstatus ok';
+    cs.textContent = 'Αν δεν άνοιξε το email σας, αντιγράψτε το μήνυμα και στείλτε το στο ' + MAIL + '.';
+    cc.hidden = false;
+  });
+  cc.addEventListener('click', async () => {
+    const { subject, body } = compose();
+    const text = `Προς: ${MAIL}\nΘέμα: ${subject}\n\n${body}`;
+    try { await navigator.clipboard.writeText(text); cs.textContent = 'Το μήνυμα αντιγράφηκε. Επικολλήστε το στο email σας.'; }
+    catch { cs.textContent = 'Δεν έγινε αντιγραφή. Στείλτε το μήνυμά σας στο ' + MAIL + '.'; }
   });
 })();
