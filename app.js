@@ -108,7 +108,9 @@
     return out;
   }
   // Παίζει τώρα αυτή η ηχογραφημένη εκπομπή; Ο τίτλος του stream έχει προτεραιότητα, αλλιώς πάει με την ώρα.
-  const recOn = (r, m) => r.re.test(norm(meta)) || m < T(r.certain);
+  // Όταν το Icecast στέλνει τίτλο, αυτός αποφασίζει ακριβώς πότε ξεκινά και πότε τελειώνει η εκπομπή.
+  // Μόνο αν δεν υπάρχει τίτλος (π.χ. το stream δεν απαντά) πέφτουμε στην ώρα του προγράμματος.
+  const recOn = (r, m) => meta ? r.re.test(norm(meta)) : m < T(r.certain);
   function athens() {
     const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Athens', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
     const g = t => p.find(x => x.type === t).value;
