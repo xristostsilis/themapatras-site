@@ -91,15 +91,18 @@
   // Κάθε εκπομπή διαρκεί 40–60΄: μέχρι `certain` παίζει σίγουρα, μέχρι `to` το πολύ, και μετά συνεχίζει η μουσική.
   // `at`: ώρα που προβλήθηκε αρχικά στο Mega News 104,6 (μπορεί να είναι της προηγούμενης ημέρας).
   // `re`: λέξεις που ψάχνει στον τίτλο του stream (χωρίς τόνους) για να ξέρει ότι παίζει η εκπομπή.
+  // Βάλε true για να εμφανιστούν ξανά οι ηχογραφημένες εκπομπές στο πρόγραμμα και στα κείμενα.
+  const SHOW_REC = false;
   const REC = [
     { from: '19:00', certain: '19:40', to: '20:00', ti: 'Μαινάδες', ho: 'Α. Γιάμαλη – Τζ. Μοσχολιού', at: '12:00', re: /μαιναδ|mainad/ },
     { from: '20:00', certain: '20:40', to: '21:00', ti: 'Θεός Φυλάξοι', ho: 'Δ. Βερύκιος – Δ. Αλφιέρης', at: '15:00', re: /φυλαξ|fylax|filax/ }
   ];
+  if (!SHOW_REC) document.querySelectorAll('[data-rec]').forEach(el => el.remove());
   const DN = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
   function day(d) {
     const out = []; let t = 0;
     const wk = d >= 1 && d <= 5;
-    const list = wk ? [...WD, ...REC.map(r => [r.from, r.to, r.ti, r.ho, r])] : WE;
+    const list = wk ? [...WD, ...(SHOW_REC ? REC : []).map(r => [r.from, r.to, r.ti, r.ho, r])] : WE;
     for (const [a, b, ti, ho, rec] of list) {
       if (T(a) > t) out.push({ ...OWN, a: t, b: T(a) });
       out.push({ a: T(a), b: T(b), ti, ho, rec: rec || null }); t = T(b);
