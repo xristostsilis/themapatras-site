@@ -16,8 +16,8 @@
   };
   const STREAM = 'https://radio.themapatras.gr/radio';
   const STATUS = 'https://radio.themapatras.gr/status-json.xsl';
-  const MARK = 'images/mark.png';
-  const MEGA = 'images/mega-logo.png';
+  const MARK = '/images/mark.png';
+  const MEGA = '/images/mega-logo.png';
   const $ = id => document.getElementById(id);
   const abs = u => new URL(u, location.href).href;
   const audio = $('audio'), card = $('player'), vol = $('vol'), mini = $('mini');
@@ -164,17 +164,28 @@
 
   // ================= Σελίδες (hash router, ο ήχος δεν διακόπτεται) =================
   const ROUTES = { '/': 'home', '/programma': 'programma', '/diafimisi': 'diafimisi', '/epikoinonia': 'epikoinonia', '/oroi-xrisis': 'oroi-xrisis', '/aporrito': 'aporrito', '/cookies': 'cookies', '/taytotita': 'taytotita' };
+  const ORIGIN = 'https://themapatras.gr';
   const views = [...document.querySelectorAll('.view')];
   const navLinks = [...document.querySelectorAll('[data-r]')];
   const burger = $('burger'), menu = $('menu');
   const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 }) : null;
   function closeMenu() { menu.hidden = true; burger.setAttribute('aria-expanded', 'false'); }
+  const pathKey = () => (location.pathname.replace(/index\.html$/, '').replace(/\/+$/, '') || '/');
+  const setMeta = (sel, attr, val) => { const el = document.querySelector(sel); if (el && val) el.setAttribute(attr, val); };
   function route() {
-    const name = ROUTES[location.hash.replace(/^#/, '') || '/'] || 'home';
+    const name = ROUTES[pathKey()] || 'home';
     document.body.dataset.route = name;
     views.forEach(v => { v.hidden = v.id !== 'v-' + name; });
     const v = $('v-' + name);
+    const url = ORIGIN + (name === 'home' ? '/' : '/' + name + '/');
     document.title = v.dataset.title;
+    setMeta('meta[name="description"]', 'content', v.dataset.desc);
+    setMeta('link[rel="canonical"]', 'href', url);
+    setMeta('meta[property="og:url"]', 'content', url);
+    setMeta('meta[property="og:title"]', 'content', v.dataset.title);
+    setMeta('meta[property="og:description"]', 'content', v.dataset.desc);
+    setMeta('meta[name="twitter:title"]', 'content', v.dataset.title);
+    setMeta('meta[name="twitter:description"]', 'content', v.dataset.desc);
     navLinks.forEach(a => a.dataset.r === name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     closeMenu();
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -182,9 +193,31 @@
     v.querySelectorAll('.reveal:not(.in)').forEach(el => io ? io.observe(el) : el.classList.add('in'));
     const h = v.querySelector('h1'); if (h) h.focus({ preventScroll: true });
   }
+  // Παλιοί σύνδεσμοι τύπου /#/programma → πραγματικό URL
+  function legacy() {
+    const m = /^#\/([a-z-]*)/.exec(location.hash);
+    if (!m) return;
+    const to = m[1] && ROUTES['/' + m[1]] ? '/' + m[1] + '/' : '/';
+    try { history.replaceState(null, '', to); } catch (e) {}
+  }
+  legacy();
+  addEventListener('hashchange', () => { if (/^#\/[a-z-]*/.test(location.hash)) { legacy(); route(); } });
+  // Εσωτερικοί σύνδεσμοι: αλλάζουμε σελίδα χωρίς φόρτωση, ώστε ο ήχος να μην κόβεται
+  document.addEventListener('click', e => {
+    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href^="/"]');
+    if (!a || a.target || a.hasAttribute('download')) return;
+    const u = new URL(a.href);
+    if (u.origin !== location.origin) return;
+    const key = u.pathname.replace(/\/+$/, '') || '/';
+    if (!(key in ROUTES)) return;
+    e.preventDefault();
+    if (u.pathname !== location.pathname) { try { history.pushState(null, '', u.pathname); } catch (err) { location.href = u.pathname; return; } }
+    route();
+  });
   burger.onclick = () => { const o = menu.hidden; menu.hidden = !o; burger.setAttribute('aria-expanded', String(o)); };
   document.addEventListener('keydown', e => e.key === 'Escape' && closeMenu());
-  addEventListener('hashchange', route);
+  addEventListener('popstate', route);
 
   // ================= Τώρα παίζει + artwork =================
   const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9α-ωάέήίόύώ ]+/g, ' ').replace(/\s+/g, ' ').trim();

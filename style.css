@@ -314,3 +314,7 @@ body.has-notice .mini{bottom:calc(172px + env(safe-area-inset-bottom))}
 
 .cnote{font-size:.85rem;color:var(--muted);line-height:1.45;margin:4px 0 0}
 #cform select{width:100%;font:inherit;font-size:16px;font-weight:400;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
+
+.about{max-width:760px;margin:40px auto 0;padding:0 4px;text-align:center}
+.about h2{font-size:1.15rem;margin:0 0 8px}
+.about p{color:var(--muted);line-height:1.6;margin:0}
