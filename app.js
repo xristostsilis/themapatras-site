@@ -23,7 +23,7 @@
   const audio = $('audio'), card = $('player'), vol = $('vol'), mini = $('mini');
   const elTitle = $('title'), elArtist = $('artist'), elStatus = $('status'), elLabel = $('label');
   const art = $('art'), mart = $('mart'), amb = $('ambient');
-  let wantPlay = false, retries = 0, retryTimer, last = '', meta = '', seq = 0;
+  let wantPlay = false, retries = 0, retryTimer, dropTimer, last = '', meta = '', seq = 0;
   $('year').textContent = new Date().getFullYear();
 
   // ================= Θέμα (φωτεινό / σκούρο) =================
@@ -47,20 +47,21 @@
     document.body.classList.toggle('playing', s === 'playing');
     document.body.classList.toggle('loading', s === 'loading');
     for (const el of [card, mini]) { el.classList.toggle('playing', s === 'playing'); el.classList.toggle('loading', s === 'loading'); }
-    const label = s === 'idle' ? 'Αναπαραγωγή' : 'Παύση';
+    const label = s === 'idle' ? 'Αναπαραγωγή ζωντανά' : 'Διακοπή';
     for (const b of playBtns) if (b.classList.contains('play')) b.setAttribute('aria-label', label);
-    $('hero-play').textContent = s === 'idle' ? 'Ακούστε τώρα' : 'Παύση';
+    $('hero-play').textContent = s === 'idle' ? 'Ακούστε τώρα' : 'Διακοπή';
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = s === 'playing' ? 'playing' : 'paused';
   };
   function start() {
-    wantPlay = true; clearTimeout(retryTimer); elStatus.textContent = '';
+    wantPlay = true; clearTimeout(retryTimer); clearTimeout(dropTimer); elStatus.textContent = '';
     setState('loading');
     audio.src = STREAM + '?t=' + Date.now();
     audio.play().catch(onFail);
   }
   function stop() {
     wantPlay = false; retries = 0; clearTimeout(retryTimer);
-    audio.pause(); audio.removeAttribute('src'); audio.load();
+    audio.pause();
+    clearTimeout(dropTimer); dropTimer = setTimeout(() => { if (!wantPlay) { audio.removeAttribute('src'); audio.load(); } }, 10 * 60 * 1000);
     setState('idle'); elStatus.textContent = '';
   }
   function onFail() {
@@ -78,7 +79,7 @@
   try { const v = localStorage.getItem('vol'); if (v !== null) vol.value = v; } catch (e) {}
   audio.volume = +vol.value;
   vol.addEventListener('input', () => { audio.volume = +vol.value; try { localStorage.setItem('vol', vol.value); } catch (e) {} });
-  if ('mediaSession' in navigator) for (const [a, f] of [['play', start], ['pause', stop], ['stop', stop]]) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} }
+  if ('mediaSession' in navigator) for (const [a, f] of [['play', start], ['pause', stop], ['stop', stop], ['seekbackward', null], ['seekforward', null], ['seekto', null], ['previoustrack', null], ['nexttrack', null]]) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} }
 
   // ================= Πρόγραμμα (ώρα Ελλάδας) =================
   const T = s => { const [h, m] = s.split(':'); return +h * 60 + +m; };
@@ -273,7 +274,7 @@
     const artwork = url && !isMega
       ? [{ src: url, sizes: '512x512', type: 'image/jpeg' }]
       : [{ src: abs(isMega ? MEGA : MARK), sizes: '512x512', type: 'image/png' }];
-    navigator.mediaSession.metadata = new MediaMetadata({ title, artist: artist || 'Θέμα Πάτρας 98.7 FM', album: isMega ? 'Mega News 104,6 · αναμετάδοση' : 'Θέμα Πάτρας 98.7 FM', artwork });
+    navigator.mediaSession.metadata = new MediaMetadata({ title, artist: artist || 'Θέμα Πάτρας 98.7 FM', album: isMega ? 'LIVE · Mega News 104,6 αναμετάδοση' : 'LIVE · Θέμα Πάτρας 98.7 FM', artwork });
   }
   function render() {
     nowNext();
