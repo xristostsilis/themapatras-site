@@ -53,13 +53,13 @@
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = s === 'playing' ? 'playing' : 'paused';
   };
   function start() {
-    wantPlay = true; clearTimeout(retryTimer); clearTimeout(dropTimer); elStatus.textContent = '';
+    wantPlay = true; clearTimeout(retryTimer); clearTimeout(dropTimer); clearInterval(resumeTimer); interrupted = false; elStatus.textContent = '';
     setState('loading');
     audio.src = STREAM + '?t=' + Date.now();
     audio.play().catch(onFail);
   }
   function stop() {
-    wantPlay = false; retries = 0; clearTimeout(retryTimer);
+    wantPlay = false; retries = 0; clearTimeout(retryTimer); clearInterval(resumeTimer); interrupted = false;
     audio.pause();
     clearTimeout(dropTimer); dropTimer = setTimeout(() => { if (!wantPlay) { audio.removeAttribute('src'); audio.load(); } }, 10 * 60 * 1000);
     setState('idle'); elStatus.textContent = '';
@@ -75,7 +75,23 @@
   audio.addEventListener('waiting', () => wantPlay && setState('loading'));
   audio.addEventListener('error', onFail);
   audio.addEventListener('stalled', () => wantPlay && setTimeout(() => audio.paused && onFail(), 4000));
-  audio.addEventListener('pause', () => { if (wantPlay && document.body.classList.contains('playing')) stop(); });
+  // Διακοπή από το σύστημα (τηλεφώνημα, Siri, άλλη εφαρμογή): δεν είναι δική μας Διακοπή.
+  // Κρατάμε wantPlay και προσπαθούμε να συνεχίσουμε μόνοι μας όταν ελευθερωθεί ο ήχος.
+  let interrupted = false, pausedAt = 0, resumeTimer, freshSrc = false;
+  const stopResume = () => { interrupted = false; clearInterval(resumeTimer); resumeTimer = null; };
+  function tryResume() {
+    if (!wantPlay || !interrupted) return stopResume();
+    if (Date.now() - pausedAt > 15000 && !freshSrc) { audio.src = STREAM + '?t=' + Date.now(); freshSrc = true; }
+    audio.play().catch(() => {});
+  }
+  audio.addEventListener('pause', () => {
+    if (!wantPlay || interrupted) return;
+    interrupted = true; pausedAt = Date.now(); freshSrc = false;
+    setState('idle');
+    clearInterval(resumeTimer); resumeTimer = setInterval(() => { if (Date.now() - pausedAt > 30 * 60 * 1000) { stopResume(); wantPlay = false; } else tryResume(); }, 3000);
+  });
+  audio.addEventListener('playing', stopResume);
+  for (const ev of ['visibilitychange', 'pageshow', 'focus']) addEventListener(ev, () => interrupted && tryResume());
   try { const v = localStorage.getItem('vol'); if (v !== null) vol.value = v; } catch (e) {}
   audio.volume = +vol.value;
   vol.addEventListener('input', () => { audio.volume = +vol.value; try { localStorage.setItem('vol', vol.value); } catch (e) {} });
