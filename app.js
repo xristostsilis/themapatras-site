@@ -81,7 +81,7 @@
   const stopResume = () => { interrupted = false; clearInterval(resumeTimer); resumeTimer = null; };
   function tryResume() {
     if (!wantPlay || !interrupted) return stopResume();
-    if (Date.now() - pausedAt > 15000 && !freshSrc) { audio.src = STREAM + '?t=' + Date.now(); freshSrc = true; }
+    if (!freshSrc) { audio.src = STREAM + '?t=' + Date.now(); freshSrc = true; } // πάντα νέα σύνδεση: η παλιά είναι νεκρή μετά τη διακοπή
     audio.play().catch(() => {});
   }
   audio.addEventListener('pause', () => {
@@ -91,6 +91,15 @@
     clearInterval(resumeTimer); resumeTimer = setInterval(() => { if (Date.now() - pausedAt > 30 * 60 * 1000) { stopResume(); wantPlay = false; } else tryResume(); }, 3000);
   });
   audio.addEventListener('playing', stopResume);
+  // Φρουρός: αν δείχνει «παίζει» αλλά ο ήχος δεν προχωράει (νεκρή σύνδεση μετά από διακοπή), ξανασυνδέεται.
+  let lastT = -1, stuck = 0;
+  const check = () => {
+    if (!wantPlay || interrupted || audio.paused || !document.body.classList.contains('playing')) { stuck = 0; lastT = -1; return; }
+    if (audio.currentTime === lastT) { if (++stuck >= 2) { stuck = 0; lastT = -1; retries = 0; start(); } }
+    else { stuck = 0; lastT = audio.currentTime; }
+  };
+  setInterval(check, 3000);
+  addEventListener('visibilitychange', () => { if (!document.hidden) { stuck = 1; lastT = audio.currentTime; setTimeout(check, 1500); } });
   for (const ev of ['visibilitychange', 'pageshow', 'focus']) addEventListener(ev, () => interrupted && tryResume());
   try { const v = localStorage.getItem('vol'); if (v !== null) vol.value = v; } catch (e) {}
   audio.volume = +vol.value;
