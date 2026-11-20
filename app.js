@@ -274,6 +274,7 @@
     const artwork = url && !isMega
       ? [{ src: url, sizes: '512x512', type: 'image/jpeg' }]
       : [{ src: abs(isMega ? MEGA : MARK), sizes: '512x512', type: 'image/png' }];
+    try { navigator.mediaSession.setPositionState({ duration: Infinity, position: 0, playbackRate: 1 }); } catch (e) {}
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist: artist || 'Θέμα Πάτρας 98.7 FM', album: isMega ? 'LIVE · Mega News 104,6 αναμετάδοση' : 'LIVE · Θέμα Πάτρας 98.7 FM', artwork });
   }
   function render() {
