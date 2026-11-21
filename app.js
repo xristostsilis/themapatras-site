@@ -88,7 +88,7 @@
     if (!wantPlay || interrupted) return;
     interrupted = true; pausedAt = Date.now(); freshSrc = false;
     setState('idle');
-    clearInterval(resumeTimer); resumeTimer = setInterval(() => { if (Date.now() - pausedAt > 30 * 60 * 1000) { stopResume(); wantPlay = false; } else tryResume(); }, 3000);
+    // Δεν ξαναπαίζουμε μόνοι μας (θα έπαιζε μέσα στο τηλεφώνημα). Το iOS συνεχίζει μόνο του όταν τελειώσει η διακοπή· αλλιώς play από το lock screen.
   });
   audio.addEventListener('playing', stopResume);
   // Φρουρός: αν δείχνει «παίζει» αλλά ο ήχος δεν προχωράει (νεκρή σύνδεση μετά από διακοπή), ξανασυνδέεται.
@@ -100,7 +100,7 @@
   };
   setInterval(check, 3000);
   addEventListener('visibilitychange', () => { if (!document.hidden) { stuck = 1; lastT = audio.currentTime; setTimeout(check, 1500); } });
-  for (const ev of ['visibilitychange', 'pageshow', 'focus']) addEventListener(ev, () => interrupted && tryResume());
+  for (const ev of ['visibilitychange', 'pageshow']) addEventListener(ev, () => !document.hidden && interrupted && tryResume());
   try { const v = localStorage.getItem('vol'); if (v !== null) vol.value = v; } catch (e) {}
   audio.volume = +vol.value;
   vol.addEventListener('input', () => { audio.volume = +vol.value; try { localStorage.setItem('vol', vol.value); } catch (e) {} });
