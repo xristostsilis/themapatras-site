@@ -123,7 +123,8 @@
     { from: '19:00', certain: '19:40', to: '20:00', ti: 'Μαινάδες', ho: 'Α. Γιάμαλη – Τζ. Μοσχολιού', at: '12:00', re: /μαιναδ|mainad/ },
     { from: '20:00', certain: '20:40', to: '21:00', ti: 'Θεός Φυλάξοι', ho: 'Δ. Βερύκιος – Δ. Αλφιέρης', at: '15:00', re: /φυλαξ|fylax|filax/ }
   ];
-  if (!SHOW_REC) document.querySelectorAll('[data-rec]').forEach(el => el.remove());
+  const stripRec = (el = document) => { if (!SHOW_REC) el.querySelectorAll('[data-rec]').forEach(x => x.remove()); };
+  stripRec();
   const DN = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
   function day(d) {
     const out = []; let t = 0;
@@ -145,9 +146,10 @@
     const g = t => p.find(x => x.type === t).value;
     return { d: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(g('weekday')), m: +g('hour') * 60 + +g('minute') };
   }
-  const tabs = $('tabs'), plist = $('plist');
+  let tabs = null, plist = null;
   let selDay = null;
   function drawDay(d) {
+    if (!plist) return;
     selDay = d;
     const n = athens();
     [...tabs.children].forEach(b => b.setAttribute('aria-selected', +b.dataset.d === d));
@@ -167,14 +169,18 @@
     $('infod-b').innerHTML = `<p>Πρόκειται για ηχογραφημένες αναμεταδόσεις από το <strong>Mega News 104,6</strong>. Ξεκινούν σε σταθερή ώρα και έχουν μεταβλητή διάρκεια, από 40 έως 60 λεπτά. Μόλις τελειώσουν, συνεχίζει η μουσική.</p><ul class="mini-list">${ends}</ul><p>Ανάλογα με το πότε το Mega News 104,6 διαθέτει κάθε εκπομπή, μπορεί να είναι της προηγούμενης ημέρας.</p>`;
     infod.showModal();
   }
-  plist.addEventListener('click', e => { if (e.target.closest('[data-info]')) openInfo(); });
+  document.addEventListener('click', e => { if (e.target.closest('#plist [data-info]')) openInfo(); });
   $('infod-x').onclick = () => infod.close();
   infod.addEventListener('click', e => { if (e.target === infod) infod.close(); });
-  [1,2,3,4,5,6,0].forEach(d => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.dataset.d = d; b.setAttribute('role', 'tab'); b.textContent = DN[d];
-    b.onclick = () => drawDay(d); tabs.append(b);
-  });
+  function initProgramma() {
+    if (tabs || !$('tabs')) return;
+    tabs = $('tabs'); plist = $('plist');
+    [1,2,3,4,5,6,0].forEach(d => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.d = d; b.setAttribute('role', 'tab'); b.textContent = DN[d];
+      b.onclick = () => drawDay(d); tabs.append(b);
+    });
+  }
   function nowNext() {
     const n = athens(), list = day(n.d);
     const cur = list.find(x => n.m >= x.a && n.m < x.b);
@@ -198,8 +204,35 @@
   function closeMenu() { menu.hidden = true; burger.setAttribute('aria-expanded', 'false'); }
   const pathKey = () => (location.pathname.replace(/index\.html$/, '').replace(/\/+$/, '') || '/');
   const setMeta = (sel, attr, val) => { const el = document.querySelector(sel); if (el && val) el.setAttribute(attr, val); };
+  // Κάθε σελίδα έχει πλήρες μόνο το δικό της περιεχόμενο (για να μη θεωρούνται διπλότυπες από το Google).
+  // Οι υπόλοιπες ενότητες είναι κενές (data-lazy) και φορτώνονται από τη δική τους σελίδα όταν χρειαστούν.
+  const loading = {};
+  function loadView(name) {
+    const v = $('v-' + name);
+    if (!v || !v.hasAttribute('data-lazy')) return Promise.resolve();
+    return loading[name] ||= fetch('/' + name + '/', { credentials: 'same-origin' })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(t => {
+        const src = new DOMParser().parseFromString(t, 'text/html').getElementById('v-' + name);
+        if (!src || src.hasAttribute('data-lazy')) throw new Error('empty');
+        v.innerHTML = src.innerHTML; v.removeAttribute('data-lazy');
+        initViews(v);
+      })
+      .catch(err => { delete loading[name]; throw err; });
+  }
+  function initViews(el) { stripRec(el); initProgramma(); initIdent(); }
+  let routeSeq = 0;
   function route() {
     const name = ROUTES[pathKey()] || 'home';
+    const v0 = $('v-' + name);
+    if (v0 && v0.hasAttribute('data-lazy')) {
+      const my = ++routeSeq;
+      document.body.classList.add('loading-view');
+      loadView(name).then(() => { if (my === routeSeq) { document.body.classList.remove('loading-view'); route(); } })
+        .catch(() => { location.href = '/' + name + '/'; });
+      return;
+    }
+    ++routeSeq; document.body.classList.remove('loading-view');
     document.body.dataset.route = name;
     views.forEach(v => { v.hidden = v.id !== 'v-' + name; });
     const v = $('v-' + name);
@@ -346,20 +379,26 @@
       first ? dl.prepend(row) : dl.append(row);
     }
   }
+  let identDone = false;
+  function initIdent() {
+  if (identDone || !$('ident')) return; identDone = true;
   fillDl('ident', [['Άδεια / ΕΣΡ', ENTITY.licence], ['Έδρα', ENTITY.address], ['ΓΕΜΗ', ENTITY.gemi], ['ΑΦΜ / ΔΟΥ', [ENTITY.afm, ENTITY.doy].filter(Boolean).join(' / ')], ['Νομική μορφή', ENTITY.form], ['Επωνυμία φορέα', ENTITY.name]].map(r => [...r, true]));
   fillDl('transp', [['Ιδιοκτήτες (άμεσοι και έμμεσοι)', ENTITY.owners], ['Πραγματικοί δικαιούχοι', ENTITY.beneficial], ['Κρατική διαφήμιση (προηγούμενο έτος)', ENTITY.stateAds]]);
-  if (!$('transp').children.length) $('transp').remove();
+  if ($('transp') && !$('transp').children.length) $('transp').remove();
+  }
+  initIdent(); initProgramma();
 
   // ================= Ενημέρωση για αποθήκευση ρυθμίσεων =================
   const notice = $('notice');
   let seen = false; try { seen = localStorage.getItem('notice') === '1'; } catch (e) {}
   if (!seen) { notice.hidden = false; document.body.classList.add('has-notice'); }
   $('notice-ok').onclick = () => { notice.hidden = true; document.body.classList.remove('has-notice'); try { localStorage.setItem('notice', '1'); } catch (e) {} };
-  $('clear-prefs').onclick = () => {
+  document.addEventListener('click', e => { if (e.target.closest('#clear-prefs')) clearPrefs(); });
+  function clearPrefs() {
     try { for (const k of ['theme', 'vol', 'notice']) localStorage.removeItem(k); } catch (e) {}
     delete root.dataset.theme; themeColor(); vol.value = 0.8; audio.volume = 0.8;
     $('clear-msg').textContent = 'Οι αποθηκευμένες ρυθμίσεις διαγράφηκαν.';
-  };
+  }
 
   route(); render(); poll(); setInterval(poll, 15000); setInterval(render, 30000);
   document.addEventListener('visibilitychange', () => !document.hidden && poll());
@@ -370,15 +409,16 @@
     .then(d => { const c = d.current, w = WX[c.weather_code] || ['🌡️', ''], el = $('weather'); el.textContent = `${w[0]} Πάτρα ${Math.round(c.temperature_2m)}°C ${w[1]}`; el.hidden = false; }).catch(() => {});
 
   // ================= Φόρμα επικοινωνίας (mailto, χωρίς αποστολή από τον ιστότοπο) =================
-  const cf = $('cform'), cs = $('cstatus'), cc = $('ccopy');
   const MAIL = 'themapatras@gmail.com';
   const compose = () => {
-    const d = Object.fromEntries(new FormData(cf));
+    const d = Object.fromEntries(new FormData($('cform')));
     const subject = `${d.topic} – από το site`;
     const body = `Όνομα: ${d.name}\n${d.phone ? 'Τηλέφωνο: ' + d.phone + '\n' : ''}\n${d.message}`;
     return { subject, body };
   };
-  cf.addEventListener('submit', e => {
+  document.addEventListener('submit', e => {
+    if (e.target.id !== 'cform') return;
+    const cf = e.target, cs = $('cstatus'), cc = $('ccopy');
     e.preventDefault();
     if (!cf.reportValidity()) return;
     const { subject, body } = compose();
@@ -387,7 +427,9 @@
     cs.textContent = 'Αν δεν άνοιξε το email σας, αντιγράψτε το μήνυμα και στείλτε το στο ' + MAIL + '.';
     cc.hidden = false;
   });
-  cc.addEventListener('click', async () => {
+  document.addEventListener('click', async e => {
+    if (!e.target.closest('#ccopy')) return;
+    const cs = $('cstatus');
     const { subject, body } = compose();
     const text = `Προς: ${MAIL}\nΘέμα: ${subject}\n\n${body}`;
     try { await navigator.clipboard.writeText(text); cs.textContent = 'Το μήνυμα αντιγράφηκε. Επικολλήστε το στο email σας.'; }
